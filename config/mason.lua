@@ -86,53 +86,32 @@ local function setup_with_mason()
     })
   end
 
-  -- Register vela separately via nvim-lspconfig
-  local ok_lsp, lspconfig = pcall(require, "lspconfig")
-  if not ok_lsp then return end
-
-  local configs = require("lspconfig.configs")
-  if not configs.vela then
-    configs.vela = {
-      default_config = {
-        cmd          = { "vela-lsp" },
-        filetypes    = { "vela" },
-        root_dir     = lspconfig.util.root_pattern("package.json", ".git", "go.mod"),
-        single_file_support = true,
-        init_options = { diagnosticsEnabled = true, formatEnabled = true },
-      },
-    }
-  end
-
-  -- Build capabilities with cmp-nvim-lsp if available
-  local caps = vim.lsp.protocol.make_client_capabilities()
-  caps.textDocument.completion.completionItem.snippetSupport = true
-  local ok_cmp, cmp_lsp = pcall(require, "cmp_nvim_lsp")
-  if ok_cmp then
-    caps = vim.tbl_deep_extend("force", caps, cmp_lsp.default_capabilities())
-  end
-
-  lspconfig.vela.setup({
-    capabilities = caps,
-    on_attach    = function(client, bufnr)
-      -- Standard keymaps
-      local map = function(lhs, rhs, desc)
-        vim.keymap.set("n", lhs, rhs, { buffer = bufnr, desc = desc, silent = true })
-      end
-      map("gd",         vim.lsp.buf.definition,  "Go to definition")
-      map("gD",         vim.lsp.buf.declaration, "Go to declaration")
-      map("K",          vim.lsp.buf.hover,        "Hover docs")
-      map("gi",         vim.lsp.buf.implementation, "Go to implementation")
-      map("gr",         vim.lsp.buf.references,   "Find references")
-      map("<leader>rn", vim.lsp.buf.rename,        "Rename symbol")
-      map("<leader>ca", vim.lsp.buf.code_action,   "Code action")
-      map("<leader>f",  function()
-        vim.lsp.buf.format({ async = false, timeout_ms = 3000 })
-      end, "Format")
-      map("]d",         vim.diagnostic.goto_next,  "Next diagnostic")
-      map("[d",         vim.diagnostic.goto_prev,  "Prev diagnostic")
-      map("<leader>e",  vim.diagnostic.open_float, "Diagnostic float")
-      map("<leader>q",  vim.diagnostic.setloclist, "Diagnostic list")
-    end,
+  -- vela-lsp is registered by require("vela").setup() below — do NOT also
+  -- call lspconfig.vela.setup() here, that would start a second instance.
+  -- The plugin's FileType autocmd is the single start path.
+  require("vela").setup({
+    lsp = {
+      on_attach = function(client, bufnr)
+        local map = function(lhs, rhs, desc)
+          vim.keymap.set("n", lhs, rhs, { buffer = bufnr, desc = desc, silent = true })
+        end
+        map("gd",         vim.lsp.buf.definition,  "Go to definition")
+        map("gD",         vim.lsp.buf.declaration, "Go to declaration")
+        map("K",          vim.lsp.buf.hover,        "Hover docs")
+        map("gi",         vim.lsp.buf.implementation, "Go to implementation")
+        map("gr",         vim.lsp.buf.references,   "Find references")
+        map("<leader>rn", vim.lsp.buf.rename,        "Rename symbol")
+        map("<leader>ca", vim.lsp.buf.code_action,   "Code action")
+        map("<leader>f",  function()
+          vim.lsp.buf.format({ async = false, timeout_ms = 3000 })
+        end, "Format")
+        map("]d",         vim.diagnostic.goto_next,  "Next diagnostic")
+        map("[d",         vim.diagnostic.goto_prev,  "Prev diagnostic")
+        map("<leader>e",  vim.diagnostic.open_float, "Diagnostic float")
+        map("<leader>q",  vim.diagnostic.setloclist, "Diagnostic list")
+      end,
+    },
+    format = { on_save = false },
   })
 end
 

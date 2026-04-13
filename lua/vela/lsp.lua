@@ -131,6 +131,11 @@ local clients = {} -- root → client_id
 ---@param bufnr number
 ---@param config VelaConfig
 function M.start(bufnr, config)
+  -- Guard: don't start if a vela-lsp client is already attached to this buffer.
+  -- This prevents double-start when both lspconfig and our autocmd fire.
+  for _, client in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
+    if client.name == "vela-lsp" then return end
+  end
   local bin = resolve_bin(config)
   if not bin then
     vim.notify(
@@ -207,21 +212,20 @@ end
 --  nvim-lspconfig registration (optional)
 -- ─────────────────────────────────────────────
 
----Register vela-lsp with nvim-lspconfig.
----Call this if you prefer to manage servers via lspconfig.
+---Register vela-lsp with nvim-lspconfig so it is discoverable via :LspInfo
+---and can be configured via lspconfig patterns — but does NOT auto-start.
+---The FileType autocmd in init.lua is the single start path.
 ---@param config VelaConfig
 function M.register(config)
   local ok, lspconfig = pcall(require, "lspconfig")
-  if not ok then
-    -- No lspconfig — will use bare vim.lsp.start() instead
-    return
-  end
+  if not ok then return end
 
   local configs = require("lspconfig.configs")
+  if configs.vela then return end  -- already registered
 
-  -- Only register once
-  if configs.vela then return end
-
+  -- Register the server definition so lspconfig knows about it,
+  -- but pass autostart = false so lspconfig does NOT also create
+  -- its own FileType autocmd. init.lua's autocmd is the sole trigger.
   configs.vela = {
     default_config = {
       cmd          = { resolve_bin(config) or "vela-lsp" },
@@ -230,6 +234,7 @@ function M.register(config)
         unpack(config.lsp.root_markers)
       ),
       single_file_support = true,
+      autostart    = false,   -- critical: prevent lspconfig double-start
       settings     = config.lsp.settings,
       init_options = {
         diagnosticsEnabled = true,
@@ -244,27 +249,8 @@ function M.register(config)
       },
     },
   }
-
-  -- Auto-start via lspconfig
-  lspconfig.vela.setup({
-    capabilities = (function()
-      local caps = vim.lsp.protocol.make_client_capabilities()
-      caps.textDocument.completion.completionItem.snippetSupport = true
-      local cok, cmp_lsp = pcall(require, "cmp_nvim_lsp")
-      if cok then
-        return vim.tbl_deep_extend("force", caps, cmp_lsp.default_capabilities())
-      end
-      return caps
-    end)(),
-    on_attach = function(client, bufnr)
-      if type(config.lsp.on_attach) == "function" then
-        config.lsp.on_attach(client, bufnr)
-      end
-      if config.lsp.on_attach ~= false then
-        default_on_attach(client, bufnr, config)
-      end
-    end,
-  })
+  -- Do NOT call lspconfig.vela.setup() here — that would register a second
+  -- FileType autocmd on top of the one in init.lua, causing two instances.
 end
 
 -- ─────────────────────────────────────────────
