@@ -14,7 +14,7 @@
 -- ─────────────────────────────────────────────
 --
 -- 1. Build:
---      cd vela/lsp && go build -o vela-lsp .
+--      cd vela/lsp && go build -o vela-lsp ./cmd/lsp
 --
 -- 2. Install to mason's bin directory so mason tracks it:
 --      mv vela-lsp ~/.local/share/nvim/mason/bin/vela-lsp

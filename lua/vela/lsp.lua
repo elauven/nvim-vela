@@ -82,8 +82,11 @@ local function default_on_attach(client, bufnr, config)
   map("n", km.hover,            vim.lsp.buf.hover,           "Hover documentation")
   map("n", km.references,       vim.lsp.buf.references,      "Find references")
   map("n", km.rename,           vim.lsp.buf.rename,          "Rename symbol")
-  map("n", km.code_action,      vim.lsp.buf.code_action,     "Code actions")
-  map("v", km.code_action,      vim.lsp.buf.code_action,     "Code actions (range)")
+  -- Code actions: only bind when the server declares support
+  if client.server_capabilities.codeActionProvider then
+    map("n", km.code_action,    vim.lsp.buf.code_action,     "Code actions")
+    map("v", km.code_action,    vim.lsp.buf.code_action,     "Code actions (range)")
+  end
 
   -- Formatting
   map("n", km.format, function()
@@ -140,7 +143,7 @@ function M.start(bufnr, config)
   if not bin then
     vim.notify(
       "vela-lsp binary not found.\n" ..
-      "Build it: cd vela/lsp && go build -o vela-lsp .\n" ..
+      "Build it: cd vela/lsp && go build -o vela-lsp ./cmd/lsp\n" ..
       "Then add to PATH or set vim.g.vela_lsp_bin.",
       vim.log.levels.ERROR
     )

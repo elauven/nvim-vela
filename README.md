@@ -28,7 +28,7 @@ Neovim LSP client and syntax support for the [Vela framework](https://github.com
 
 ```bash
 cd vela/lsp          # companion LSP server directory
-go build -o vela-lsp .
+go build -o vela-lsp ./cmd/lsp
 sudo mv vela-lsp /usr/local/bin/   # or ~/bin/ or anywhere on $PATH
 ```
 
