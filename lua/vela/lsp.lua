@@ -102,9 +102,22 @@ local function default_on_attach(client, bufnr, config)
   map("n", km.diagnostics_prev,  vim.diagnostic.goto_prev,   "Prev diagnostic")
   map("n", km.diagnostics_float, vim.diagnostic.open_float,  "Diagnostic details")
 
-  -- Show signature help on insert-mode parenthesis
+  -- Show signature help on insert-mode ( and ,
   if client.server_capabilities.signatureHelpProvider then
     map("i", "<C-k>", vim.lsp.buf.signature_help, "Signature help")
+    -- Auto-trigger on ( and ,
+    vim.api.nvim_create_autocmd("TextChangedI", {
+      buffer   = bufnr,
+      callback = function()
+        local line = vim.api.nvim_get_current_line()
+        local col  = vim.api.nvim_win_get_cursor(0)[2]
+        local ch   = col > 0 and line:sub(col, col) or ""
+        if ch == "(" or ch == "," then
+          vim.lsp.buf.signature_help()
+        end
+      end,
+      desc = "Auto signature help on ( and ,",
+    })
   end
 
   -- Highlight symbol under cursor on CursorHold
@@ -296,6 +309,18 @@ function M.show_info()
 
   if vim.tbl_isempty(clients) then
     table.insert(lines, "No active clients.")
+  end
+
+  -- JS bridge status
+  table.insert(lines, "")
+  table.insert(lines, "## JS Bridge (typescript-language-server)")
+  local tsserver = vim.fn.exepath("typescript-language-server")
+  if tsserver ~= "" then
+    table.insert(lines, "  ✓ Found: " .. tsserver)
+    table.insert(lines, "  Script sections get full JS completions, hover, and go-to-def.")
+  else
+    table.insert(lines, "  ✗ Not found — install for JS intelligence in <script> blocks:")
+    table.insert(lines, "    npm install -g typescript-language-server typescript")
   end
 
   -- Also show active clients for current buffer
